@@ -7,10 +7,10 @@ serverSocket.bind(("",serverPort))
 serverSocket.listen(1)
 print("Servidor funcionando\n")
 
-# número do ACK (server-side)
-n=0
 
 while True:
+	# número do ACK (server-side)
+	n=0
 	connectionSocket,addr = serverSocket.accept()
 	print(f"Conectado com {addr}")
 
