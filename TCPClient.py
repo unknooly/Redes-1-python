@@ -1,18 +1,19 @@
 from socket import socket,AF_INET,SOCK_STREAM,SHUT_WR
 from os import scandir,system
 import config
+import random
 # system("clear")
 
 class arquivo:
     def __init__(self,name,path):
         self.name=name
         self.path=path
-# class pacote:
-#     def __init__(self,maxSize,content,id,isACKED):
-#         self.size=maxSize
-#         self.content=content
-#         self.id=id
-#         self.isACKED=isACKED
+class pacote:
+    def __init__(self,maxSize,content,id,isACKED):
+        self.size=maxSize
+        self.content=content
+        self.id=id
+        self.isACKED=isACKED
 
 # selecionar arquivo
 arquivos=[]
@@ -43,6 +44,8 @@ serverName=config.ip
 serverPort=12000
 
 with socket(AF_INET,SOCK_STREAM) as clientSocket:
+    pacotes=[]
+    n=0
     clientSocket.connect((serverName,serverPort))
 
     clientSocket.sendall(f"Cliente enviando arquivo: {arquivos[op].name}".encode("utf-8"))
@@ -50,13 +53,27 @@ with socket(AF_INET,SOCK_STREAM) as clientSocket:
     
     with open(arquivos[op].path,"rb") as f:
         while True:
-            pacote=f.read(tamanhoPacote)
-            if not pacote:
+            pkg=f.read(tamanhoPacote)
+            chance=random.randint(1,100)
+            pacotes.append(pacote(tamanhoPacote,pkg,n,False))
+            if not pkg:
                 break
-            clientSocket.sendall(pacote)
-            ack = clientSocket.recv(1024)
-            print(ack.decode())
+            clientSocket.sendall(pkg)
+            if chance!=100:
+                try:
+                    ack = clientSocket.recv(1024)
+                    if ack:
+                        pacotes[n].isACKED=True
+                        print(f"ACK recebido do pacote {n}: {ack.decode()}")
+                except Exception as erro:
+                    print(f"Erro ao receber ACK do pacote {n}: {erro}")
+            n+=1
 
     clientSocket.shutdown(SHUT_WR)
     ackFinal = clientSocket.recv(1024)
     print(f"Resposta final: {ackFinal.decode()}")
+
+# pacotes que não foram enviados
+for item in pacotes:
+    if item.isACKED==False:
+        print(f"Pacote {item.id}")

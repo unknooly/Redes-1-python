@@ -26,7 +26,9 @@ while True:
 				if not pacote:
 					break
 				f.write(pacote)
-				connectionSocket.send(f"ACK nº {n}".encode())
+				msg=f"ACK nº {n}"
+				print(msg)
+				connectionSocket.send(msg.encode())
 				n+=1
 
 		print(f"Arquivo <{arquivo}> recebido com sucesso")
