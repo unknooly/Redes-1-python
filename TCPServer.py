@@ -44,9 +44,9 @@ while True:
 
 			buffer[pacote_id]=payload
 
-			ack_msg=f"ACK nº {pacote_id}".encode()
+			ack_msg=f"ACK nº {pacote_id}"
 			try:
-				connectionSocket.send(ack_msg)
+				connectionSocket.send(ack_msg.encode())
 				print(f"✅ {ack_msg}")
 			except Exception as erroACK:
 				print(f"Erro ao enviar ACK")
