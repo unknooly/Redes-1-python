@@ -2,78 +2,105 @@ from socket import socket,AF_INET,SOCK_STREAM,SHUT_WR
 from os import scandir,system
 import config
 import random
-# system("clear")
+
+if not config.debug:
+    system("clear")
+
+arquivos=[]
+pacotes=[]
 
 class arquivo:
     def __init__(self,name,path):
         self.name=name
         self.path=path
 class pacote:
-    def __init__(self,maxSize,content,id,isACKED):
+    def __init__(self,maxSize,content,id):
         self.size=maxSize
         self.content=content
         self.id=id
-        self.isACKED=isACKED
+        self.isACKed=False
 
 # selecionar arquivo
-arquivos=[]
-
 def scan(path):
     with scandir(path) as lista:
         for item in lista:
-            if item.is_file():
+            if item.is_file() and not item.name.startswith("."):
                 arquivos.append(arquivo(item.name,item.path))
             elif item.is_dir() and not item.name.startswith("."):
                 scan(item.path)
 scan("./")
 
+# input
 if config.debug:
-    op=0
-    tamanhoPacote=5
+    op=config.op
+    tamanhoPacote=config.tamanhoPacote
 else:
-    op=-1
     for i,item in enumerate(arquivos,start=0):
         print(f"{i} - {item.name}")
-    while(op<0 or op>=len(arquivos)):
-        op=int(input("\n\tSelecione um arquivo para enviar: "))
+    print("\n")
 
-    tamanhoPacote=int(input("\tTamanho do pacote: "))
+    op=-1
+    while(op<0 or op>=len(arquivos)):
+        op=int(input("\tSelecione um arquivo para enviar: "))
+    print()
+
+    tamanhoPacote=0
+    while(tamanhoPacote==0 or tamanhoPacote>1024):
+        tamanhoPacote=int(input("\tTamanho do pacote: "))
+    print("\n")
 
 # envia arquivo selecionado
 serverName=config.ip
 serverPort=12000
 
 with socket(AF_INET,SOCK_STREAM) as clientSocket:
-    pacotes=[]
-    n=0
-    clientSocket.connect((serverName,serverPort))
+    try:
+        clientSocket.connect((serverName,serverPort))
+    except Exception as erroConectar:
+        print(f"Erro em conectar: {erroConectar}")
 
-    clientSocket.sendall(f"Cliente enviando arquivo: {arquivos[op].name}".encode("utf-8"))
-    ack = clientSocket.recv(1024)
-    
-    with open(arquivos[op].path,"rb") as f:
-        while True:
-            pkg=f.read(tamanhoPacote)
-            chance=random.randint(1,100)
-            pacotes.append(pacote(tamanhoPacote,pkg,n,False))
-            if not pkg:
-                break
-            clientSocket.sendall(pkg)
-            if chance!=100:
-                try:
-                    ack = clientSocket.recv(1024)
-                    if ack:
-                        pacotes[n].isACKED=True
-                        print(f"ACK recebido do pacote {n}: {ack.decode()}")
-                except Exception as erro:
-                    print(f"Erro ao receber ACK do pacote {n}: {erro}")
-            n+=1
+    try:
+        clientSocket.sendall(f"Cliente enviando arquivo: {arquivos[op].name}".encode("utf-8"))
+        ack = clientSocket.recv(1024).decode()
+        print(f"Servidor respondeu: {ack}")
+    except Exception as erroEnvioHeader:
+        print(f"Erro ao enviar cabeçalho: {erroEnvioHeader}")
 
+    contador=0
+
+    try:
+        with open(arquivos[op].path,"rb") as f:
+            while True:
+                payload=f.read(tamanhoPacote)
+                if not payload:
+                    break
+
+                pacotes.append(pacote(tamanhoPacote,payload,contador))
+
+                if random.randint(1,100) > config.chance:
+                    try:
+                        clientSocket.sendall(pacotes[contador].content)
+                    except Exception as erroEnviarPacote:
+                        print(f"Erro ao enviar pacote {contador}: {erroEnviarPacote}")
+                    try:
+                        ack = clientSocket.recv(1024).decode()
+                        if ack==f"ACK nº {contador}":
+                            pacotes[contador].isACKed=True
+                            print(f"✅ ACK {contador}: {ack}")
+                    except Exception as erroReceberAck:
+                        print(f"Erro ao receber ACK {contador}: {erroReceberAck}")
+                else:
+                    print(f"❌ Falha em enviar pacote {contador}")
+                contador+=1
+    except Exception as erroAbrir:
+        print(f"Erro ao ler arquivo: {erroAbrir}")
+ 
     clientSocket.shutdown(SHUT_WR)
     ackFinal = clientSocket.recv(1024)
     print(f"Resposta final: {ackFinal.decode()}")
 
 # pacotes que não foram enviados
+tentativas=0
 for item in pacotes:
-    if item.isACKED==False:
-        print(f"Pacote {item.id}")
+    if item.isACKed==False:
+        print(f"Pacote não enviado: nº {item.id}")

@@ -7,18 +7,15 @@ serverSocket.bind(("",serverPort))
 serverSocket.listen(1)
 print("Servidor funcionando\n")
 
-
 while True:
-	# número do ACK (server-side)
-	n=0
 	connectionSocket,addr = serverSocket.accept()
-	print(f"Conectado com {addr}")
+	print(f"🔗 Conectado com {addr}")
 
 	try:
 		header=connectionSocket.recv(1024).decode("utf-8")
 		arquivo=header.split(":",1)[1].strip()
 		print(f"Arquivo <{arquivo}> está vindo")
-		connectionSocket.send(b"ACK inicial")
+		connectionSocket.send(f"Aguardando arquivo <{arquivo}>").encode()
 
 		with open(f"{caminho}/{arquivo}","wb") as f:
 			while True:
