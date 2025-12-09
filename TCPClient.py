@@ -93,35 +93,35 @@ with socket(AF_INET,SOCK_STREAM) as clientSocket:
                     except Exception as erroEnviarPacote:
                         print(f"Erro ao enviar pacote {contador}: {erroEnviarPacote}")
                 else:
-                    print(f"❌ Falha em enviar pacote {contador}")
+                    print(f"❌ Falha: sem ACK nº {contador}")
                 contador+=1
     except Exception as erroAbrir:
         print(f"Erro ao ler arquivo: {erroAbrir}")
  
+    # pacotes que não foram enviados
+    tentativas=0
+
+    while any(not pac.isACKed for pac in pacotes) and tentativas<100:
+        print(f"\n🔁 Reenvio nº {tentativas+1}")
+        for pac in pacotes:
+            if not pac.isACKed:
+                if random.randint(1,100) > config.chance:
+                    header=pac.id.to_bytes(4,"big")
+                    try:
+                        clientSocket.sendall(header+pac.content)
+                        try:
+                            ack = clientSocket.recv(1024).decode()
+                            if ack==f"ACK nº {pac.id}":
+                                pac.isACKed=True
+                                print(f"✅ ACK {pac.id}: {ack}")
+                        except Exception as erroReceberAck:
+                            print(f"Erro ao receber ACK {pac.id}: {erroReceberAck}")
+                    except Exception as erroEnviarPacote:
+                        print(f"Erro ao enviar pacote {pac.id}: {erroEnviarPacote}")
+                else:
+                    print(f"❌ Falha: sem ACK nº {pac.id}")
+        tentativas+=1
+
     clientSocket.shutdown(SHUT_WR)
     ackFinal = clientSocket.recv(1024)
     print(f"Resposta final: {ackFinal.decode()}")
-
-# pacotes que não foram enviados
-# tentativas=0
-
-# while any(not pac.isACKed for pac in pacotes) and tentativas<1:
-#     print(f"\n🔁 Reenvio nº {tentativas}")
-#     for pac in pacotes:
-#         if not pac.isACKed:
-#             if random.randint(1,100) > config.chance:
-#                 header=pac.id.to_bytes(4,"big")
-#                 try:
-#                     clientSocket.sendall(header+pac.content)
-#                     try:
-#                         ack = clientSocket.recv(1024).decode()
-#                         if ack==f"ACK nº {pac.id}":
-#                             pac.isACKed=True
-#                             print(f"✅ ACK {pac.id}: {ack}")
-#                     except Exception as erroReceberAck:
-#                         print(f"Erro ao receber ACK {pac.id}: {erroReceberAck}")
-#                 except Exception as erroEnviarPacote:
-#                     print(f"Erro ao enviar pacote {pac.id}: {erroEnviarPacote}")
-#             else:
-#                 print(f"❌ Falha em enviar pacote {pac.id}")
-#     tentativas+=1

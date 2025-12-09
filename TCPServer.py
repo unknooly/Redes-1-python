@@ -1,5 +1,5 @@
 from socket import socket,AF_INET,SOCK_STREAM
-from config import caminho
+from os import system
 
 serverPort = 12000
 serverSocket = socket(AF_INET, SOCK_STREAM)
@@ -59,7 +59,8 @@ while True:
 
 	finally:
 		connectionSocket.close()
-		with open(f"{caminho}/{arquivo}","wb") as f:
+		system(f"mkdir -p ./files")
+		with open(f"./files/{arquivo}","wb") as f:
 			for pac_id in sorted(buffer.keys()):
 				f.write(buffer[pac_id])
 		print("Conexão encerrada\n")

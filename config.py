@@ -1,6 +1,5 @@
 ip="192.168.1.246"
-caminho="./files"
-chance=0 # chance de erro em %
+chance=10 # chance de erro em %
 
 # debug
 debug=False
